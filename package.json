@@ -9,6 +9,9 @@
   "scripts": {
     "dev:web": "npm run dev --workspace=@controle-financeiro/web",
     "dev:api": "npm run start:dev --workspace=@controle-financeiro/api",
+    "db:generate": "npm run db:generate --workspace=@controle-financeiro/api",
+    "db:migrate": "npm run db:migrate --workspace=@controle-financeiro/api",
+    "db:studio": "npm run db:studio --workspace=@controle-financeiro/api",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",

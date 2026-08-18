@@ -1,0 +1,175 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+  engineType   = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  CASH
+  INVESTMENT
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  CANCELED
+}
+
+enum RecurrenceFrequency {
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+model User {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  fullName              String                 @map("full_name") @db.VarChar(160)
+  email                 String                 @unique @db.VarChar(255)
+  passwordHash          String                 @map("password_hash") @db.VarChar(255)
+  active                Boolean                @default(true)
+  sessions              Session[]
+  accounts              Account[]
+  categories            Category[]
+  transactions          FinancialTransaction[]
+  recurringTransactions RecurringTransaction[]
+  budgets               Budget[]
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  tokenHash String   @unique @map("token_hash") @db.Char(64)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  ownerId               String                 @map("owner_id") @db.Uuid
+  name                  String                 @db.VarChar(100)
+  type                  AccountType
+  initialBalanceInCents Int                    @default(0) @map("initial_balance_in_cents")
+  active                Boolean                @default(true)
+  owner                 User                   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  transactions          FinancialTransaction[] @relation("SourceAccount")
+  incomingTransfers     FinancialTransaction[] @relation("DestinationAccount")
+  recurringTransactions RecurringTransaction[] @relation("RecurringSourceAccount")
+  incomingRecurring     RecurringTransaction[] @relation("RecurringDestinationAccount")
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+
+  @@index([ownerId])
+  @@map("accounts")
+}
+
+model Category {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  ownerId               String?                @map("owner_id") @db.Uuid
+  name                  String                 @db.VarChar(100)
+  type                  TransactionType
+  color                 String                 @db.VarChar(20)
+  icon                  String                 @db.VarChar(50)
+  active                Boolean                @default(true)
+  owner                 User?                  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  transactions          FinancialTransaction[]
+  recurringTransactions RecurringTransaction[]
+  budgets               Budget[]
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+
+  @@unique([ownerId, name, type])
+  @@index([ownerId])
+  @@map("categories")
+}
+
+model FinancialTransaction {
+  id                   String                @id @default(uuid()) @db.Uuid
+  ownerId              String                @map("owner_id") @db.Uuid
+  accountId            String                @map("account_id") @db.Uuid
+  destinationAccountId String?               @map("destination_account_id") @db.Uuid
+  categoryId           String?               @map("category_id") @db.Uuid
+  recurrenceId         String?               @map("recurrence_id") @db.Uuid
+  description          String                @db.VarChar(180)
+  amountInCents        Int                   @map("amount_in_cents")
+  type                 TransactionType
+  status               TransactionStatus     @default(COMPLETED)
+  occurredAt           DateTime              @map("occurred_at")
+  owner                User                  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  account              Account               @relation("SourceAccount", fields: [accountId], references: [id], onDelete: Restrict)
+  destinationAccount   Account?              @relation("DestinationAccount", fields: [destinationAccountId], references: [id], onDelete: Restrict)
+  category             Category?             @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  recurrence           RecurringTransaction? @relation(fields: [recurrenceId], references: [id], onDelete: SetNull)
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+
+  @@index([ownerId, occurredAt])
+  @@index([accountId])
+  @@index([destinationAccountId])
+  @@index([categoryId])
+  @@map("financial_transactions")
+}
+
+model RecurringTransaction {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  ownerId               String                 @map("owner_id") @db.Uuid
+  accountId             String                 @map("account_id") @db.Uuid
+  destinationAccountId  String?                @map("destination_account_id") @db.Uuid
+  categoryId            String?                @map("category_id") @db.Uuid
+  description           String                 @db.VarChar(180)
+  amountInCents         Int                    @map("amount_in_cents")
+  type                  TransactionType
+  frequency             RecurrenceFrequency
+  interval              Int                    @default(1)
+  nextOccurrenceAt      DateTime               @map("next_occurrence_at")
+  active                Boolean                @default(true)
+  owner                 User                   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  account               Account                @relation("RecurringSourceAccount", fields: [accountId], references: [id], onDelete: Restrict)
+  destinationAccount    Account?               @relation("RecurringDestinationAccount", fields: [destinationAccountId], references: [id], onDelete: Restrict)
+  category              Category?              @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  generatedTransactions FinancialTransaction[]
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+
+  @@index([ownerId])
+  @@index([nextOccurrenceAt, active])
+  @@map("recurring_transactions")
+}
+
+model Budget {
+  id           String   @id @default(uuid()) @db.Uuid
+  ownerId      String   @map("owner_id") @db.Uuid
+  categoryId   String   @map("category_id") @db.Uuid
+  year         Int
+  month        Int
+  limitInCents Int      @map("limit_in_cents")
+  owner        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  category     Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerId, categoryId, year, month])
+  @@index([ownerId, year, month])
+  @@map("budgets")
+}

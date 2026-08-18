@@ -47,8 +47,8 @@ export function Sidebar() {
 
       <div className="sidebar__progress">
         <span>Desenvolvimento</span>
-        <strong>Parte 1 de 6</strong>
-        <div className="progress-bar" aria-label="Uma de seis etapas concluídas">
+        <strong>Parte 2 de 6</strong>
+        <div className="progress-bar" aria-label="Duas de seis etapas concluídas">
           <span />
         </div>
       </div>

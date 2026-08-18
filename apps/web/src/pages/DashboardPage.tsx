@@ -1,5 +1,6 @@
-import { Bell, ChevronRight, Plus } from 'lucide-react'
+import { ChevronRight, LogOut, Plus } from 'lucide-react'
 import { Sidebar } from '../components/layout/Sidebar'
+import { useAuth } from '../contexts/auth-context'
 import { SummaryCard } from '../features/dashboard/components/SummaryCard'
 import {
   financialSummaries,
@@ -7,6 +8,15 @@ import {
 } from '../features/dashboard/data/dashboard-data'
 
 export function DashboardPage() {
+  const { user, logout } = useAuth()
+  const firstName = user?.fullName.split(' ')[0] ?? 'Usuário'
+  const initials = user?.fullName
+    .split(' ')
+    .slice(0, 2)
+    .map((name) => name.charAt(0))
+    .join('')
+    .toUpperCase()
+
   return (
     <div className="app-shell">
       <Sidebar />
@@ -19,13 +29,19 @@ export function DashboardPage() {
           </div>
 
           <div className="topbar__actions">
-            <button className="icon-button" type="button" aria-label="Notificações" disabled>
-              <Bell size={19} />
+            <button
+              className="icon-button"
+              type="button"
+              aria-label="Sair da conta"
+              title="Sair"
+              onClick={() => void logout()}
+            >
+              <LogOut size={18} />
             </button>
-            <div className="user-chip" aria-label="Usuário de demonstração">
-              <span>MB</span>
+            <div className="user-chip" aria-label="Usuário autenticado">
+              <span>{initials}</span>
               <div>
-                <strong>Marcus</strong>
+                <strong>{firstName}</strong>
                 <small>Conta pessoal</small>
               </div>
             </div>
