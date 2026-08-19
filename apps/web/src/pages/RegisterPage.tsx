@@ -91,7 +91,7 @@ export function RegisterPage() {
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           autoComplete="new-password"
-          placeholder="Pelo menos 10 caracteres"
+          placeholder="10+ caracteres, maiúscula e número"
           minLength={10}
           maxLength={128}
           required

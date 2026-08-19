@@ -1,5 +1,5 @@
 import { X } from 'lucide-react'
-import { useEffect, type PropsWithChildren } from 'react'
+import { useEffect, useId, useRef, type PropsWithChildren } from 'react'
 
 interface ModalProps extends PropsWithChildren {
   open: boolean
@@ -15,15 +15,28 @@ export function Modal({
   onClose,
   children,
 }: ModalProps) {
+  const titleId = useId()
+  const descriptionId = useId()
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+
   useEffect(() => {
     if (!open) return
+
+    const previousOverflow = document.body.style.overflow
+    const previouslyFocusedElement = document.activeElement as HTMLElement | null
+    document.body.style.overflow = 'hidden'
+    closeButtonRef.current?.focus()
 
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
     }
 
     document.addEventListener('keydown', closeOnEscape)
-    return () => document.removeEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('keydown', closeOnEscape)
+      document.body.style.overflow = previousOverflow
+      previouslyFocusedElement?.focus()
+    }
   }, [onClose, open])
 
   if (!open) return null
@@ -40,17 +53,18 @@ export function Modal({
         className="modal-card"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="modal-title"
-        aria-describedby="modal-description"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
       >
         <header className="modal-card__header">
           <div>
-            <h2 id="modal-title">{title}</h2>
-            <p id="modal-description">{description}</p>
+            <h2 id={titleId}>{title}</h2>
+            <p id={descriptionId}>{description}</p>
           </div>
           <button
             className="icon-button"
             type="button"
+            ref={closeButtonRef}
             onClick={onClose}
             aria-label="Fechar"
           >

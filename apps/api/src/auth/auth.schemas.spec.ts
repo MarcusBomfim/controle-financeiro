@@ -5,7 +5,7 @@ describe('auth schemas', () => {
     const result = registerSchema.parse({
       fullName: '  Maria da Silva  ',
       email: 'MARIA@EXEMPLO.COM',
-      password: 'senha-segura-123',
+      password: 'Senha-segura-123',
     });
 
     expect(result.fullName).toBe('Maria da Silva');
@@ -17,6 +17,16 @@ describe('auth schemas', () => {
       fullName: 'Maria da Silva',
       email: 'maria@exemplo.com',
       password: '123',
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a password without an uppercase letter', () => {
+    const result = registerSchema.safeParse({
+      fullName: 'Maria da Silva',
+      email: 'maria@exemplo.com',
+      password: 'senha-segura-123',
     });
 
     expect(result.success).toBe(false);

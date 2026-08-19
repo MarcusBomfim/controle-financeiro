@@ -2248,3 +2248,55 @@ p {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+@media (max-width: 560px) {
+  .topbar {
+    align-items: flex-start;
+  }
+
+  .topbar h1 {
+    font-size: 1.05rem;
+  }
+
+  .data-alert {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .data-alert span,
+  .data-alert button {
+    width: 100%;
+  }
+
+  .data-alert button {
+    min-height: 42px;
+  }
+
+  .budget-card footer {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-card__header {
+    align-items: flex-start;
+  }
+}
+
+@media (pointer: coarse) {
+  button,
+  a,
+  select,
+  input {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

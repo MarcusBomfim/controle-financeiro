@@ -14,7 +14,10 @@ export const registerSchema = z.object({
   password: z
     .string()
     .min(10, 'A senha deve possuir pelo menos 10 caracteres.')
-    .max(128, 'A senha deve possuir no máximo 128 caracteres.'),
+    .max(128, 'A senha deve possuir no máximo 128 caracteres.')
+    .regex(/[a-z]/, 'A senha deve possuir uma letra minúscula.')
+    .regex(/[A-Z]/, 'A senha deve possuir uma letra maiúscula.')
+    .regex(/\d/, 'A senha deve possuir um número.'),
 });
 
 export const loginSchema = z.object({

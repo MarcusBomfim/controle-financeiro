@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validar aplicação
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v7
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Verificar padronização
+        run: npm run lint
+
+      - name: Executar testes unitários
+        run: npm run test
+
+      - name: Executar teste de integração da API
+        run: npm run test:e2e --workspace=@controle-financeiro/api
+
+      - name: Gerar builds de produção
+        run: npm run build

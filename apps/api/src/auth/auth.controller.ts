@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { Throttle } from '@nestjs/throttler';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { loginSchema, registerSchema } from './auth.schemas';
 import type { LoginInput, RegisterInput } from './auth.schemas';
@@ -26,6 +27,7 @@ export class AuthController {
   ) {}
 
   @Post('register')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async register(
     @Body(new ZodValidationPipe(registerSchema)) input: RegisterInput,
     @Res({ passthrough: true }) response: Response,
@@ -37,6 +39,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   async login(
     @Body(new ZodValidationPipe(loginSchema)) input: LoginInput,

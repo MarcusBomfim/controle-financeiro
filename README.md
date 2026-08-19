@@ -26,7 +26,11 @@ em arquitetura organizada, segurança, regras de negócio e testes automatizados
 ### Qualidade e infraestrutura
 
 - Jest
+- Vitest
 - Docker Compose
+- Nginx
+- GitHub Actions
+- Helmet e rate limiting
 - ESLint e Prettier
 - AWS, prevista para a etapa de publicação
 
@@ -36,7 +40,7 @@ em arquitetura organizada, segurança, regras de negócio e testes automatizados
 - [x] Parte 2 — PostgreSQL, Prisma e autenticação
 - [x] Parte 3 — Contas, categorias e movimentações
 - [x] Parte 4 — Dashboard, filtros e orçamentos
-- [ ] Parte 5 — Testes, segurança, responsividade e Docker
+- [x] Parte 5 — Testes, segurança, responsividade e Docker
 - [ ] Parte 6 — Revisão, demonstração, documentação e AWS
 
 ## Funcionalidades atuais
@@ -48,6 +52,10 @@ em arquitetura organizada, segurança, regras de negócio e testes automatizados
 - Senhas protegidas com hash `scrypt`, salt individual e comparação segura.
 - Tokens de sessão aleatórios; apenas o hash do token é salvo no banco.
 - Validação dos dados recebidos com Zod.
+- Política de senhas com tamanho mínimo, letra maiúscula, minúscula e número.
+- Limite global de requisições e limites específicos no cadastro e no login.
+- Proteção contra requisições de escrita originadas de sites não autorizados.
+- Cabeçalhos HTTP de segurança e limite de tamanho para o corpo das requisições.
 - Cadastro, ativação e desativação de contas.
 - Saldo atualizado a partir das receitas, despesas e transferências concluídas.
 - Categorias iniciais criadas automaticamente para cada usuário.
@@ -60,6 +68,9 @@ em arquitetura organizada, segurança, regras de negócio e testes automatizados
 - Planejamento mensal de limites por categoria.
 - Comparação automática entre valor planejado, gasto e disponível.
 - Rota de saúde da API.
+- Testes unitários da API e da interface, além do teste de integração da API.
+- Pipeline de integração contínua para lint, testes e build em cada alteração.
+- Execução completa com containers para interface, API e PostgreSQL.
 - Modelo relacional preparado para usuários, contas, categorias, movimentações,
   recorrências, orçamentos e sessões.
 
@@ -67,8 +78,12 @@ em arquitetura organizada, segurança, regras de negócio e testes automatizados
 
 ```text
 controle-financeiro/
+├── .github/
+│   └── workflows/ci.yml             # Validação automática no GitHub
 ├── apps/
 │   ├── web/
+│   │   ├── Dockerfile
+│   │   ├── nginx.conf               # Servidor da interface e proxy da API
 │   │   └── src/
 │   │       ├── app/                 # Rotas da aplicação
 │   │       ├── components/          # Componentes de interface e autenticação
@@ -79,6 +94,7 @@ controle-financeiro/
 │   │       ├── styles/              # Estilos globais
 │   │       └── types/               # Tipos da interface
 │   └── api/
+│       ├── Dockerfile
 │       ├── prisma/
 │       │   ├── migrations/           # Histórico versionado do banco
 │       │   └── schema.prisma         # Modelo do PostgreSQL
@@ -104,10 +120,39 @@ Os valores monetários são representados em centavos para evitar problemas de
 precisão. Cada registro financeiro possui relação com seu usuário, garantindo a
 separação dos dados entre as contas cadastradas.
 
-O PostgreSQL local é iniciado pelo Docker Compose na porta `5434`, evitando
-conflitos com uma possível instalação local na porta padrão `5432`.
+No modo de desenvolvimento, o PostgreSQL é disponibilizado na porta `5434`,
+evitando conflitos com uma possível instalação local na porta padrão `5432`.
 
-## Como executar
+## Como executar com Docker
+
+Esta é a forma mais rápida de iniciar a aplicação completa. Com o Docker Desktop
+aberto e o mecanismo Linux em execução, use:
+
+```powershell
+docker compose up --build -d
+```
+
+O comando cria o banco, aplica as migrações, inicia a API e publica a interface
+com Nginx. Aguarde os serviços ficarem saudáveis e acesse:
+
+```text
+Aplicação: http://localhost:8080
+API:       http://localhost:3333/api
+Saúde:     http://localhost:3333/api/health
+```
+
+Para acompanhar a inicialização ou encerrar os containers:
+
+```powershell
+docker compose ps
+docker compose logs -f api
+docker compose down
+```
+
+O banco é mantido no volume `controle_financeiro_data`. As credenciais presentes
+no Compose são destinadas somente ao ambiente local.
+
+## Como executar em desenvolvimento
 
 ### Requisitos
 
@@ -132,7 +177,7 @@ Copy-Item apps\api\.env.example apps\api\.env
 O arquivo de exemplo já possui os dados necessários para o ambiente local. Não
 adicione o arquivo `.env` ao Git.
 
-### 3. Inicie o PostgreSQL
+### 3. Inicie somente o PostgreSQL
 
 ```powershell
 docker compose up -d database
@@ -216,8 +261,8 @@ docker compose down
 
 ## Próxima etapa
 
-A Parte 5 ampliará os testes, reforçará a segurança, revisará a responsividade e
-preparará os serviços completos da aplicação para execução com Docker.
+A Parte 6 fará a revisão final, preparará dados de demonstração e documentação
+de entrega e definirá a estratégia de publicação na AWS.
 
 ## Autor
 

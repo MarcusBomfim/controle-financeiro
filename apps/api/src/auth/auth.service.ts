@@ -24,11 +24,17 @@ function toAuthUser(user: {
 
 @Injectable()
 export class AuthService {
+  private readonly dummyPasswordHash: Promise<string>;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly passwordService: PasswordService,
     private readonly sessionService: SessionService,
-  ) {}
+  ) {
+    this.dummyPasswordHash = this.passwordService.hash(
+      'Senha-temporaria-interna-4827',
+    );
+  }
 
   async register(input: RegisterInput): Promise<AuthResult> {
     const passwordHash = await this.passwordService.hash(input.password);
@@ -60,12 +66,13 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { email: input.email },
     });
+    const passwordHash = user?.passwordHash ?? (await this.dummyPasswordHash);
+    const passwordMatches = await this.passwordService.verify(
+      input.password,
+      passwordHash,
+    );
 
-    if (
-      !user ||
-      !user.active ||
-      !(await this.passwordService.verify(input.password, user.passwordHash))
-    ) {
+    if (!user || !user.active || !passwordMatches) {
       throw new UnauthorizedException('E-mail ou senha inválidos.');
     }
 
