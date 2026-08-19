@@ -33,7 +33,7 @@ em arquitetura organizada, segurança, regras de negócio e testes automatizados
 
 - [x] Parte 1 — Estrutura, planejamento e domínio inicial
 - [x] Parte 2 — PostgreSQL, Prisma e autenticação
-- [ ] Parte 3 — Contas, categorias e movimentações
+- [x] Parte 3 — Contas, categorias e movimentações
 - [ ] Parte 4 — Dashboard, filtros e orçamentos
 - [ ] Parte 5 — Testes, segurança, responsividade e Docker
 - [ ] Parte 6 — Revisão, demonstração, documentação e AWS
@@ -47,7 +47,14 @@ em arquitetura organizada, segurança, regras de negócio e testes automatizados
 - Senhas protegidas com hash `scrypt`, salt individual e comparação segura.
 - Tokens de sessão aleatórios; apenas o hash do token é salvo no banco.
 - Validação dos dados recebidos com Zod.
-- Dashboard inicial com dados demonstrativos.
+- Cadastro, ativação e desativação de contas.
+- Saldo atualizado a partir das receitas, despesas e transferências concluídas.
+- Categorias iniciais criadas automaticamente para cada usuário.
+- Cadastro e ativação ou desativação de categorias personalizadas.
+- Registro de receitas, despesas e transferências.
+- Movimentações concluídas, pendentes ou canceladas.
+- Histórico com filtros por tipo, situação e conta.
+- Dashboard calculado a partir dos dados reais do usuário.
 - Rota de saúde da API.
 - Modelo relacional preparado para usuários, contas, categorias, movimentações,
   recorrências, orçamentos e sessões.
@@ -72,11 +79,14 @@ controle-financeiro/
 │       │   ├── migrations/           # Histórico versionado do banco
 │       │   └── schema.prisma         # Modelo do PostgreSQL
 │       └── src/
+│           ├── accounts/             # Contas e cálculo dos saldos
 │           ├── auth/                 # Cadastro, login, sessão e proteção de rota
+│           ├── categories/           # Categorias padrão e personalizadas
 │           ├── common/               # Recursos compartilhados
 │           ├── config/               # Validação das variáveis de ambiente
 │           ├── database/             # Integração entre Prisma e PostgreSQL
-│           └── domain/               # Entidades, enums e regras financeiras
+│           ├── domain/               # Entidades, enums e regras financeiras
+│           └── transactions/         # Movimentações e validações
 ├── docker-compose.yml
 ├── package.json
 └── README.md
@@ -166,6 +176,22 @@ criar seu usuário.
 | `GET` | `/api/auth/me` | Retorna o usuário autenticado. |
 | `GET` | `/api/health` | Verifica a disponibilidade da API. |
 
+## Rotas financeiras
+
+Todas as rotas desta seção exigem uma sessão autenticada.
+
+| Método | Rota | Finalidade |
+| --- | --- | --- |
+| `GET` | `/api/accounts` | Lista as contas e seus saldos atuais. |
+| `POST` | `/api/accounts` | Cadastra uma conta. |
+| `PATCH` | `/api/accounts/:id` | Atualiza ou altera a situação da conta. |
+| `GET` | `/api/categories` | Lista as categorias do usuário. |
+| `POST` | `/api/categories` | Cadastra uma categoria personalizada. |
+| `PATCH` | `/api/categories/:id` | Atualiza ou altera a situação da categoria. |
+| `GET` | `/api/transactions` | Lista e filtra as movimentações. |
+| `POST` | `/api/transactions` | Registra uma movimentação. |
+| `PATCH` | `/api/transactions/:id/cancel` | Cancela uma movimentação. |
+
 ## Comandos úteis
 
 ```powershell
@@ -180,8 +206,8 @@ docker compose down
 
 ## Próxima etapa
 
-A Parte 3 implementará o cadastro e gerenciamento de contas, categorias e
-movimentações financeiras utilizando os dados reais do usuário autenticado.
+A Parte 4 implementará filtros por período no servidor, gráficos do dashboard e
+o gerenciamento dos orçamentos mensais.
 
 ## Autor
 
