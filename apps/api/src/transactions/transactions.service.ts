@@ -30,7 +30,7 @@ export class TransactionsService {
     if (query.from || query.to) {
       where.occurredAt = {
         ...(query.from ? { gte: new Date(query.from) } : {}),
-        ...(query.to ? { lte: new Date(query.to) } : {}),
+        ...(query.to ? { lt: new Date(query.to) } : {}),
       };
     }
 

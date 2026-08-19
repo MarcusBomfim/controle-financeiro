@@ -1,104 +1,149 @@
 import {
   ChevronRight,
   CircleAlert,
-  Landmark,
   Plus,
   RefreshCw,
+  Target,
 } from 'lucide-react'
-import { useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AppShell } from '../components/layout/AppShell'
 import { useFinance } from '../contexts/finance-context'
 import { AccountFormModal } from '../features/accounts/components/AccountFormModal'
+import { CashFlowChart } from '../features/dashboard/components/CashFlowChart'
+import { CategoryChart } from '../features/dashboard/components/CategoryChart'
 import { SummaryCard } from '../features/dashboard/components/SummaryCard'
 import { TransactionFormModal } from '../features/transactions/components/TransactionFormModal'
+import { financeApi } from '../services/finance-api'
 import type { FinancialSummary } from '../types/dashboard'
+import type { DashboardOverview } from '../types/finance'
 import { formatCurrency, formatShortDate } from '../utils/formatters'
 
-function isCurrentMonth(date: string) {
-  const value = new Date(date)
-  const today = new Date()
+const today = new Date()
+const currentPeriod = `${today.getFullYear()}-${String(
+  today.getMonth() + 1,
+).padStart(2, '0')}`
 
-  return (
-    value.getMonth() === today.getMonth() &&
-    value.getFullYear() === today.getFullYear()
-  )
+function formatPeriod(period: string) {
+  const [year, month] = period.split('-').map(Number)
+
+  return new Intl.DateTimeFormat('pt-BR', {
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(year, month - 1, 1))
 }
 
 export function DashboardPage() {
-  const { accounts, transactions, loading, error, refresh } = useFinance()
+  const {
+    accounts,
+    transactions,
+    loading: financeLoading,
+    error: financeError,
+    refresh,
+  } = useFinance()
+  const [period, setPeriod] = useState(currentPeriod)
+  const [overview, setOverview] = useState<DashboardOverview | null>(null)
+  const [overviewLoading, setOverviewLoading] = useState(true)
+  const [overviewError, setOverviewError] = useState<string | null>(null)
   const [transactionModalOpen, setTransactionModalOpen] = useState(false)
   const [accountModalOpen, setAccountModalOpen] = useState(false)
-
   const activeAccounts = accounts.filter((account) => account.active)
-  const completedCurrentMonth = transactions.filter(
-    (transaction) =>
-      transaction.status === 'COMPLETED' &&
-      isCurrentMonth(transaction.occurredAt),
-  )
 
-  const totalBalance = activeAccounts.reduce(
-    (total, account) => total + account.currentBalanceInCents,
-    0,
-  )
-  const income = completedCurrentMonth
-    .filter((transaction) => transaction.type === 'INCOME')
-    .reduce((total, transaction) => total + transaction.amountInCents, 0)
-  const expenses = completedCurrentMonth
-    .filter((transaction) => transaction.type === 'EXPENSE')
-    .reduce((total, transaction) => total + transaction.amountInCents, 0)
+  useEffect(() => {
+    let active = true
+    const [year, month] = period.split('-').map(Number)
 
-  const summaries: FinancialSummary[] = [
-    {
-      label: 'Saldo total',
-      value: formatCurrency(totalBalance),
-      variation: `${activeAccounts.length} conta${activeAccounts.length === 1 ? '' : 's'} ativa${activeAccounts.length === 1 ? '' : 's'}`,
-      tone: 'neutral',
-    },
-    {
-      label: 'Receitas no mês',
-      value: formatCurrency(income),
-      variation: `${completedCurrentMonth.filter((item) => item.type === 'INCOME').length} lançamento(s) concluído(s)`,
-      tone: 'positive',
-    },
-    {
-      label: 'Despesas no mês',
-      value: formatCurrency(expenses),
-      variation:
-        income > 0
-          ? `${Math.round((expenses / income) * 100)}% das receitas do mês`
-          : 'Sem comparação com receitas',
-      tone: 'negative',
-    },
-  ]
+    financeApi
+      .getDashboard(year, month)
+      .then((response) => {
+        if (!active) return
+        setOverview(response)
+        setOverviewError(null)
+      })
+      .catch((requestError: unknown) => {
+        if (!active) return
+        setOverviewError(
+          requestError instanceof Error
+            ? requestError.message
+            : 'Não foi possível carregar o resumo mensal.',
+        )
+      })
+      .finally(() => {
+        if (active) setOverviewLoading(false)
+      })
 
-  const recentTransactions = useMemo(
-    () => transactions.filter((item) => item.status !== 'CANCELED').slice(0, 5),
-    [transactions],
-  )
+    return () => {
+      active = false
+    }
+  }, [period, transactions])
+
+  const summaries: FinancialSummary[] = overview
+    ? [
+        {
+          label: 'Saldo atual',
+          value: formatCurrency(overview.summary.totalBalanceInCents),
+          variation: `${overview.summary.activeAccounts} conta(s) ativa(s)`,
+          tone: 'neutral',
+        },
+        {
+          label: 'Receitas no período',
+          value: formatCurrency(overview.summary.incomeInCents),
+          variation: `${overview.summary.completedTransactions} movimentação(ões) concluída(s)`,
+          tone: 'positive',
+        },
+        {
+          label: 'Despesas no período',
+          value: formatCurrency(overview.summary.expenseInCents),
+          variation:
+            overview.summary.netInCents >= 0
+              ? `Resultado positivo de ${formatCurrency(overview.summary.netInCents)}`
+              : `Resultado negativo de ${formatCurrency(Math.abs(overview.summary.netInCents))}`,
+          tone: 'negative',
+        },
+      ]
+    : []
+
+  const loading = financeLoading || overviewLoading
+  const error = financeError ?? overviewError
 
   return (
     <AppShell title="Visão geral">
       <section className="hero-panel">
         <div>
           <span className="eyebrow eyebrow--light">Organização financeira</span>
-          <h2>Seu dinheiro, com mais clareza.</h2>
+          <h2>Decisões melhores começam com clareza.</h2>
           <p>
-            Os valores desta página agora são calculados a partir das suas
-            contas e movimentações cadastradas.
+            Analise receitas, despesas e limites mensais com informações
+            calculadas diretamente dos seus lançamentos.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() =>
-            activeAccounts.length > 0
-              ? setTransactionModalOpen(true)
-              : setAccountModalOpen(true)
-          }
-        >
-          <Plus size={18} aria-hidden="true" />
-          {activeAccounts.length > 0 ? 'Nova movimentação' : 'Cadastrar conta'}
-        </button>
+        <div className="hero-panel__actions">
+          <label>
+            <span>Período analisado</span>
+            <input
+              type="month"
+              value={period}
+              onChange={(event) => {
+                if (!event.target.value) return
+                setOverviewLoading(true)
+                setPeriod(event.target.value)
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() =>
+              activeAccounts.length > 0
+                ? setTransactionModalOpen(true)
+                : setAccountModalOpen(true)
+            }
+          >
+            <Plus size={18} aria-hidden="true" />
+            {activeAccounts.length > 0
+              ? 'Nova movimentação'
+              : 'Cadastrar conta'}
+          </button>
+        </div>
       </section>
 
       {error && (
@@ -114,9 +159,9 @@ export function DashboardPage() {
       {loading ? (
         <div className="content-loading">
           <RefreshCw className="spin" size={21} />
-          Carregando dados financeiros...
+          Calculando o resumo de {formatPeriod(period)}...
         </div>
-      ) : (
+      ) : overview ? (
         <>
           <section className="summary-grid" aria-label="Resumo financeiro">
             {summaries.map((summary) => (
@@ -124,7 +169,33 @@ export function DashboardPage() {
             ))}
           </section>
 
-          <section className="dashboard-grid">
+          <section className="analytics-grid">
+            <article className="panel cash-flow-panel">
+              <div className="panel__header">
+                <div>
+                  <span className="eyebrow">{formatPeriod(period)}</span>
+                  <h2>Fluxo de receitas e despesas</h2>
+                </div>
+                <div className="chart-key" aria-label="Legenda do gráfico">
+                  <span><i className="chart-key__income" /> Receitas</span>
+                  <span><i className="chart-key__expense" /> Despesas</span>
+                </div>
+              </div>
+              <CashFlowChart data={overview.cashFlow} />
+            </article>
+
+            <article className="panel category-panel">
+              <div className="panel__header">
+                <div>
+                  <span className="eyebrow">Distribuição</span>
+                  <h2>Despesas por categoria</h2>
+                </div>
+              </div>
+              <CategoryChart data={overview.categoryBreakdown} />
+            </article>
+          </section>
+
+          <section className="dashboard-grid dashboard-grid--lower">
             <article className="panel transactions-panel">
               <div className="panel__header">
                 <div>
@@ -136,32 +207,17 @@ export function DashboardPage() {
                 </Link>
               </div>
 
-              {recentTransactions.length === 0 ? (
+              {overview.recentTransactions.length === 0 ? (
                 <div className="empty-state">
                   <strong>Nenhuma movimentação cadastrada</strong>
-                  <p>
-                    Registre sua primeira receita ou despesa para visualizar o
-                    resumo financeiro.
-                  </p>
-                  {activeAccounts.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setTransactionModalOpen(true)}
-                    >
-                      <Plus size={16} /> Nova movimentação
-                    </button>
-                  )}
+                  <p>Registre uma receita ou despesa para iniciar a análise.</p>
                 </div>
               ) : (
                 <div className="transaction-list">
-                  {recentTransactions.map((transaction) => (
+                  {overview.recentTransactions.map((transaction) => (
                     <div className="transaction" key={transaction.id}>
                       <span
                         className={`transaction__mark transaction__mark--${transaction.type.toLowerCase()}`}
-                        style={{
-                          '--category-color':
-                            transaction.category?.color ?? '#3978a8',
-                        } as CSSProperties}
                       >
                         {transaction.description.charAt(0).toUpperCase()}
                       </span>
@@ -189,48 +245,65 @@ export function DashboardPage() {
               )}
             </article>
 
-            <article className="panel accounts-overview">
+            <article className="panel budget-overview-panel">
               <div className="panel__header">
                 <div>
-                  <span className="eyebrow">Patrimônio</span>
-                  <h2>Suas contas</h2>
+                  <span className="eyebrow">Planejamento mensal</span>
+                  <h2>Orçamentos</h2>
                 </div>
-                <Link to="/contas">
+                <Link to="/orcamentos">
                   Gerenciar <ChevronRight size={17} />
                 </Link>
               </div>
 
-              {activeAccounts.length === 0 ? (
+              {overview.budget.count === 0 ? (
                 <div className="empty-state">
-                  <Landmark size={28} />
-                  <strong>Comece por uma conta</strong>
-                  <p>Cadastre sua conta principal, carteira ou investimento.</p>
-                  <button
-                    type="button"
-                    onClick={() => setAccountModalOpen(true)}
-                  >
-                    <Plus size={16} /> Cadastrar conta
-                  </button>
+                  <Target size={28} />
+                  <strong>Planejamento ainda não criado</strong>
+                  <p>Defina limites para acompanhar seus gastos por categoria.</p>
+                  <Link className="inline-cta" to="/orcamentos">
+                    Criar orçamento
+                  </Link>
                 </div>
               ) : (
-                <div className="account-balance-list">
-                  {activeAccounts.slice(0, 4).map((account) => (
-                    <div key={account.id}>
-                      <span>
-                        <i aria-hidden="true" />
-                        {account.name}
-                      </span>
+                <>
+                  <div
+                    className="budget-chart"
+                    style={{
+                      background: `conic-gradient(${
+                        overview.budget.usagePercentage > 100
+                          ? '#d35757'
+                          : 'var(--primary)'
+                      } 0 ${Math.min(overview.budget.usagePercentage, 100)}%, #e7efed ${Math.min(overview.budget.usagePercentage, 100)}% 100%)`,
+                    }}
+                    aria-label={`${overview.budget.usagePercentage}% dos orçamentos utilizados`}
+                  >
+                    <div className="budget-chart__value">
+                      <strong>{overview.budget.usagePercentage}%</strong>
+                      <span>utilizado</span>
+                    </div>
+                  </div>
+
+                  <div className="budget-values">
+                    <div>
+                      <span>Gasto</span>
                       <strong>
-                        {formatCurrency(account.currentBalanceInCents)}
+                        {formatCurrency(overview.budget.spentInCents)}
                       </strong>
                     </div>
-                  ))}
-                </div>
+                    <div>
+                      <span>Planejado</span>
+                      <strong>
+                        {formatCurrency(overview.budget.limitInCents)}
+                      </strong>
+                    </div>
+                  </div>
+                </>
               )}
             </article>
           </section>
         </>
-      )}
+      ) : null}
 
       <TransactionFormModal
         open={transactionModalOpen}

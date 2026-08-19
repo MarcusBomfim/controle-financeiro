@@ -69,3 +69,62 @@ export interface CreateTransactionData {
   status: Exclude<TransactionStatus, 'CANCELED'>
   occurredAt: string
 }
+
+export interface TransactionFilters {
+  type?: TransactionType
+  status?: TransactionStatus
+  accountId?: string
+  from?: string
+  to?: string
+}
+
+export interface Budget {
+  id: string
+  categoryId: string
+  year: number
+  month: number
+  limitInCents: number
+  spentInCents: number
+  remainingInCents: number
+  usagePercentage: number
+  category: TransactionCategory
+}
+
+export interface UpsertBudgetData {
+  categoryId: string
+  year: number
+  month: number
+  limitInCents: number
+}
+
+export interface DashboardOverview {
+  period: { year: number; month: number }
+  summary: {
+    totalBalanceInCents: number
+    incomeInCents: number
+    expenseInCents: number
+    netInCents: number
+    activeAccounts: number
+    completedTransactions: number
+  }
+  cashFlow: Array<{
+    date: string
+    day: string
+    incomeInCents: number
+    expenseInCents: number
+  }>
+  categoryBreakdown: Array<{
+    categoryId: string
+    name: string
+    color: string
+    amountInCents: number
+  }>
+  budget: {
+    count: number
+    limitInCents: number
+    spentInCents: number
+    remainingInCents: number
+    usagePercentage: number
+  }
+  recentTransactions: FinancialTransaction[]
+}

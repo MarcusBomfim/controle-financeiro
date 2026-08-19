@@ -16,7 +16,7 @@ const navigationItems = [
     enabled: true,
   },
   { label: 'Contas', icon: Landmark, to: '/contas', enabled: true },
-  { label: 'Orçamentos', icon: PiggyBank, to: '/orcamentos', enabled: false },
+  { label: 'Orçamentos', icon: PiggyBank, to: '/orcamentos', enabled: true },
 ]
 
 export function Sidebar() {
@@ -61,8 +61,8 @@ export function Sidebar() {
 
       <div className="sidebar__progress">
         <span>Desenvolvimento</span>
-        <strong>Parte 3 de 6</strong>
-        <div className="progress-bar" aria-label="Três de seis etapas concluídas">
+        <strong>Parte 4 de 6</strong>
+        <div className="progress-bar" aria-label="Quatro de seis etapas concluídas">
           <span />
         </div>
       </div>

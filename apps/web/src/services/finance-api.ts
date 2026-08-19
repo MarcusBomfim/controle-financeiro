@@ -1,11 +1,15 @@
 import { apiRequest } from './api'
 import type {
   Account,
+  Budget,
   Category,
   CreateAccountData,
   CreateCategoryData,
   CreateTransactionData,
+  DashboardOverview,
   FinancialTransaction,
+  TransactionFilters,
+  UpsertBudgetData,
 } from '../types/finance'
 
 interface AccountsResponse {
@@ -18,6 +22,24 @@ interface CategoriesResponse {
 
 interface TransactionsResponse {
   transactions: FinancialTransaction[]
+}
+
+interface BudgetsResponse {
+  budgets: Budget[]
+}
+
+function createQuery(
+  values: Record<string, string | number | undefined>,
+) {
+  const query = new URLSearchParams()
+
+  Object.entries(values).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') {
+      query.set(key, String(value))
+    }
+  })
+
+  return query.toString()
 }
 
 export const financeApi = {
@@ -43,8 +65,10 @@ export const financeApi = {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
-  listTransactions: () =>
-    apiRequest<TransactionsResponse>('/transactions?limit=100'),
+  listTransactions: (filters: TransactionFilters = {}) =>
+    apiRequest<TransactionsResponse>(
+      `/transactions?${createQuery({ ...filters, limit: 100 })}`,
+    ),
   createTransaction: (data: CreateTransactionData) =>
     apiRequest<FinancialTransaction>('/transactions', {
       method: 'POST',
@@ -54,5 +78,20 @@ export const financeApi = {
     apiRequest<FinancialTransaction>(
       `/transactions/${transactionId}/cancel`,
       { method: 'PATCH' },
+    ),
+  listBudgets: (year: number, month: number) =>
+    apiRequest<BudgetsResponse>(
+      `/budgets?${createQuery({ year, month })}`,
+    ),
+  upsertBudget: (data: UpsertBudgetData) =>
+    apiRequest<Budget>('/budgets', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteBudget: (budgetId: string) =>
+    apiRequest<void>(`/budgets/${budgetId}`, { method: 'DELETE' }),
+  getDashboard: (year: number, month: number) =>
+    apiRequest<DashboardOverview>(
+      `/dashboard?${createQuery({ year, month })}`,
     ),
 }

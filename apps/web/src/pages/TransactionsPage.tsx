@@ -6,11 +6,13 @@ import {
   ReceiptText,
   RefreshCw,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AppShell } from '../components/layout/AppShell'
 import { useFinance } from '../contexts/finance-context'
 import { TransactionFormModal } from '../features/transactions/components/TransactionFormModal'
+import { financeApi } from '../services/finance-api'
 import type {
+  FinancialTransaction,
   TransactionStatus,
   TransactionType,
 } from '../types/finance'
@@ -18,6 +20,20 @@ import { formatCurrency, formatLongDate } from '../utils/formatters'
 
 type TypeFilter = TransactionType | 'ALL'
 type StatusFilter = TransactionStatus | 'ALL'
+
+const today = new Date()
+const currentPeriod = `${today.getFullYear()}-${String(
+  today.getMonth() + 1,
+).padStart(2, '0')}`
+
+function getPeriodRange(period: string) {
+  const [year, month] = period.split('-').map(Number)
+
+  return {
+    from: new Date(Date.UTC(year, month - 1, 1)).toISOString(),
+    to: new Date(Date.UTC(year, month, 1)).toISOString(),
+  }
+}
 
 const statusLabels: Record<TransactionStatus, string> = {
   COMPLETED: 'Concluída',
@@ -38,25 +54,54 @@ export function TransactionsPage() {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [accountFilter, setAccountFilter] = useState('ALL')
+  const [periodFilter, setPeriodFilter] = useState(currentPeriod)
+  const [filteredTransactions, setFilteredTransactions] =
+    useState<FinancialTransaction[]>(transactions)
+  const [filterLoading, setFilterLoading] = useState(true)
+  const [filterError, setFilterError] = useState<string | null>(null)
   const [cancelingId, setCancelingId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
-  const filteredTransactions = useMemo(
-    () =>
-      transactions.filter((transaction) => {
-        const matchesType =
-          typeFilter === 'ALL' || transaction.type === typeFilter
-        const matchesStatus =
-          statusFilter === 'ALL' || transaction.status === statusFilter
-        const matchesAccount =
-          accountFilter === 'ALL' ||
-          transaction.account.id === accountFilter ||
-          transaction.destinationAccount?.id === accountFilter
+  useEffect(() => {
+    let active = true
+    const periodRange = periodFilter
+      ? getPeriodRange(periodFilter)
+      : { from: undefined, to: undefined }
 
-        return matchesType && matchesStatus && matchesAccount
-      }),
-    [accountFilter, statusFilter, transactions, typeFilter],
-  )
+    financeApi
+      .listTransactions({
+        type: typeFilter === 'ALL' ? undefined : typeFilter,
+        status: statusFilter === 'ALL' ? undefined : statusFilter,
+        accountId: accountFilter === 'ALL' ? undefined : accountFilter,
+        ...periodRange,
+      })
+      .then((response) => {
+        if (!active) return
+        setFilteredTransactions(response.transactions)
+        setFilterError(null)
+      })
+      .catch((requestError: unknown) => {
+        if (!active) return
+        setFilterError(
+          requestError instanceof Error
+            ? requestError.message
+            : 'Não foi possível aplicar os filtros.',
+        )
+      })
+      .finally(() => {
+        if (active) setFilterLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [
+    accountFilter,
+    periodFilter,
+    statusFilter,
+    transactions,
+    typeFilter,
+  ])
 
   async function handleCancel(transactionId: string) {
     const confirmed = window.confirm(
@@ -106,12 +151,18 @@ export function TransactionsPage() {
         </button>
       </section>
 
-      {(error || actionError) && (
+      {(error || filterError || actionError) && (
         <div className="data-alert" role="alert">
           <CircleAlert size={19} />
-          <span>{actionError ?? error}</span>
-          {error && (
-            <button type="button" onClick={() => void refresh()}>
+          <span>{actionError ?? filterError ?? error}</span>
+          {(error || filterError) && (
+            <button
+              type="button"
+              onClick={() => {
+                setFilterLoading(true)
+                void refresh()
+              }}
+            >
               <RefreshCw size={15} /> Tentar novamente
             </button>
           )}
@@ -126,9 +177,10 @@ export function TransactionsPage() {
           <span>Tipo</span>
           <select
             value={typeFilter}
-            onChange={(event) =>
+            onChange={(event) => {
+              setFilterLoading(true)
               setTypeFilter(event.target.value as TypeFilter)
-            }
+            }}
           >
             <option value="ALL">Todos</option>
             <option value="INCOME">Receitas</option>
@@ -137,12 +189,24 @@ export function TransactionsPage() {
           </select>
         </label>
         <label>
+          <span>Período</span>
+          <input
+            type="month"
+            value={periodFilter}
+            onChange={(event) => {
+              setFilterLoading(true)
+              setPeriodFilter(event.target.value)
+            }}
+          />
+        </label>
+        <label>
           <span>Situação</span>
           <select
             value={statusFilter}
-            onChange={(event) =>
+            onChange={(event) => {
+              setFilterLoading(true)
               setStatusFilter(event.target.value as StatusFilter)
-            }
+            }}
           >
             <option value="ALL">Todas</option>
             <option value="COMPLETED">Concluídas</option>
@@ -154,7 +218,10 @@ export function TransactionsPage() {
           <span>Conta</span>
           <select
             value={accountFilter}
-            onChange={(event) => setAccountFilter(event.target.value)}
+            onChange={(event) => {
+              setFilterLoading(true)
+              setAccountFilter(event.target.value)
+            }}
           >
             <option value="ALL">Todas as contas</option>
             {accounts.map((account) => (
@@ -179,7 +246,7 @@ export function TransactionsPage() {
           </div>
         </div>
 
-        {loading ? (
+        {loading || filterLoading ? (
           <div className="content-loading content-loading--inside">
             <RefreshCw className="spin" size={21} />
             Carregando movimentações...

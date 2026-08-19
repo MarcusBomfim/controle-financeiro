@@ -12,6 +12,7 @@ em arquitetura organizada, segurança, regras de negócio e testes automatizados
 - TypeScript
 - Vite
 - React Router
+- Recharts
 - CSS
 
 ### API e banco de dados
@@ -34,7 +35,7 @@ em arquitetura organizada, segurança, regras de negócio e testes automatizados
 - [x] Parte 1 — Estrutura, planejamento e domínio inicial
 - [x] Parte 2 — PostgreSQL, Prisma e autenticação
 - [x] Parte 3 — Contas, categorias e movimentações
-- [ ] Parte 4 — Dashboard, filtros e orçamentos
+- [x] Parte 4 — Dashboard, filtros e orçamentos
 - [ ] Parte 5 — Testes, segurança, responsividade e Docker
 - [ ] Parte 6 — Revisão, demonstração, documentação e AWS
 
@@ -53,8 +54,11 @@ em arquitetura organizada, segurança, regras de negócio e testes automatizados
 - Cadastro e ativação ou desativação de categorias personalizadas.
 - Registro de receitas, despesas e transferências.
 - Movimentações concluídas, pendentes ou canceladas.
-- Histórico com filtros por tipo, situação e conta.
-- Dashboard calculado a partir dos dados reais do usuário.
+- Histórico com filtros processados pela API por período, tipo, situação e conta.
+- Dashboard mensal calculado a partir dos dados reais do usuário.
+- Gráficos de fluxo financeiro e despesas por categoria.
+- Planejamento mensal de limites por categoria.
+- Comparação automática entre valor planejado, gasto e disponível.
 - Rota de saúde da API.
 - Modelo relacional preparado para usuários, contas, categorias, movimentações,
   recorrências, orçamentos e sessões.
@@ -70,7 +74,7 @@ controle-financeiro/
 │   │       ├── components/          # Componentes de interface e autenticação
 │   │       ├── contexts/            # Estado global da autenticação
 │   │       ├── features/            # Funcionalidades organizadas por domínio
-│   │       ├── pages/               # Login, cadastro e dashboard
+│   │       ├── pages/               # Páginas da aplicação
 │   │       ├── services/            # Comunicação com a API
 │   │       ├── styles/              # Estilos globais
 │   │       └── types/               # Tipos da interface
@@ -81,10 +85,12 @@ controle-financeiro/
 │       └── src/
 │           ├── accounts/             # Contas e cálculo dos saldos
 │           ├── auth/                 # Cadastro, login, sessão e proteção de rota
+│           ├── budgets/              # Limites mensais por categoria
 │           ├── categories/           # Categorias padrão e personalizadas
 │           ├── common/               # Recursos compartilhados
 │           ├── config/               # Validação das variáveis de ambiente
 │           ├── database/             # Integração entre Prisma e PostgreSQL
+│           ├── dashboard/            # Indicadores e séries dos gráficos
 │           ├── domain/               # Entidades, enums e regras financeiras
 │           └── transactions/         # Movimentações e validações
 ├── docker-compose.yml
@@ -105,7 +111,7 @@ conflitos com uma possível instalação local na porta padrão `5432`.
 
 ### Requisitos
 
-- Node.js 22 ou superior
+- Node.js 24 ou superior
 - npm
 - Docker Desktop com o mecanismo Linux em execução
 
@@ -191,6 +197,10 @@ Todas as rotas desta seção exigem uma sessão autenticada.
 | `GET` | `/api/transactions` | Lista e filtra as movimentações. |
 | `POST` | `/api/transactions` | Registra uma movimentação. |
 | `PATCH` | `/api/transactions/:id/cancel` | Cancela uma movimentação. |
+| `GET` | `/api/budgets` | Lista os orçamentos de determinado mês. |
+| `PUT` | `/api/budgets` | Cria ou atualiza um limite mensal. |
+| `DELETE` | `/api/budgets/:id` | Remove um orçamento. |
+| `GET` | `/api/dashboard` | Retorna o resumo e os gráficos do período. |
 
 ## Comandos úteis
 
@@ -206,8 +216,8 @@ docker compose down
 
 ## Próxima etapa
 
-A Parte 4 implementará filtros por período no servidor, gráficos do dashboard e
-o gerenciamento dos orçamentos mensais.
+A Parte 5 ampliará os testes, reforçará a segurança, revisará a responsividade e
+preparará os serviços completos da aplicação para execução com Docker.
 
 ## Autor
 
